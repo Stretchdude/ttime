@@ -68,9 +68,21 @@ struct my_time min2t(const int mins)
 	t.m = mins % 60;
 	t.h = mins / 60;
 	t.s = 0;
+	t.next = NULL;
 	return t;
 }
 
+void print_list(struct my_time *first)
+{
+	int n = 0;
+	struct my_time *it = first;
+	while(it){
+		printf("[%d] %02d:%02d\n", n, it->h, it->m);
+		it =it->next; 
+		n++;
+	}
+
+}
 
 void just_go(const time_t *now)
 {
@@ -153,6 +165,19 @@ struct work_day sum_up_times(struct my_time *times, struct tm *nowtm)
 {
 	struct work_day_mins mins = sum_up_hours(times, nowtm);
 	return mins2times(mins.workmin, mins.breakmin);
+}
+
+
+struct tm *get_now()
+{
+	struct timeval time; ;
+	time_t now;
+	struct tm *nowtm;
+
+	gettimeofday(&time, NULL);
+	now =  time.tv_sec;
+	nowtm = localtime(&now);
+	return nowtm;
 }
 
 void go(int argc, char **argv)

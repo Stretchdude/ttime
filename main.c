@@ -1,3 +1,6 @@
+
+#include "header.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -6,26 +9,8 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-#define ERR_BADTOKEN 1
 
-int target_workmin = 7*60+48;
-
-struct my_time {
-	int h;
-	int m;
-	int s;
-	struct my_time *next;
-};
-
-struct work_day {
-	struct my_time workt;
-	struct my_time breakt;
-};
-
-struct work_day_mins {
-	int workmin;
-	int breakmin;
-};
+#define FILENAME "lala.csv"
 
 struct my_time *scan_time(char *argv)
 {
@@ -72,21 +57,24 @@ struct my_time min2t(const int mins)
 	return t;
 }
 
+
 void print_list(struct my_time *first)
 {
 	int n = 0;
 	struct my_time *it = first;
 	while(it){
-		printf("[%d] %02d:%02d\n", n, it->h, it->m);
+		printf("  [%d] %02d:%02d\n", n, it->h, it->m);
 		it =it->next; 
 		n++;
 	}
 
 }
 
+
+
 void just_go(const time_t *now)
 {
-	time_t gotime = *now + target_workmin * 60;
+	time_t gotime = *now + TARGET_WORK_MIN * 60;
 	struct tm *gotm = localtime(&gotime);
 	char buff[128] = {0};
 
@@ -121,10 +109,14 @@ struct work_day_mins sum_up_hours(struct my_time *time, struct tm *nowtm)
 	/* if a time is missing assume work end time is now */
 	if (i % 2 && NULL == it) {
 		struct my_time mnow = { .h = nowtm->tm_hour, .m = nowtm->tm_min, .s = 0};
+
+		mnow.h = nowtm->tm_hour;
+		mnow.m = nowtm->tm_min;
+		mnow.s = 0;
 		printf("assume \"now\" for last time value: %02d:%02d\n", mnow.h, mnow.m);
 		minutes += t2min(&mnow);
 	}
-
+	
 	/* keep an eye on the correct break times */
 	struct my_time w = min2t(minutes);
 	if (breaks < 45 && minutes > 9 * 60) {
@@ -136,7 +128,6 @@ struct work_day_mins sum_up_hours(struct my_time *time, struct tm *nowtm)
 		printf("forcing 30 minutes break for %d minutes work!\n", minutes); 
 		minutes -= 30;
 	}
-	
 	struct work_day_mins day = {minutes, breaks};
 
 	return day;
@@ -202,12 +193,12 @@ void go(int argc, char **argv)
 		printf("breaktime so far in min: %d -> %d:%d:%d\n",
 			daym.breakmin, w.breakt.h, w.breakt.m, w.breakt.s);
 
-		int result = daym.workmin - target_workmin;
+		int result = daym.workmin - TARGET_WORK_MIN;
 		if (0 < result) {
 			printf("worked enough today - +%d minutes\n", result);
 		 } else {
 			printf("still %d minutes to work\n", result);
-			printf("has: %d :: must %d\n", daym.workmin, target_workmin);
+			printf("has: %d :: must %d\n", daym.workmin, TARGET_WORK_MIN);
 		 }
 	}
 }
@@ -229,6 +220,33 @@ void print_help(char *me)
 	printf("\t\t\t\tmissing last time will be assumed as now\n");
 }
 
+
+void add_now_today_to_file(struct my_date *days)
+{	
+	if (NULL == days){
+		days = get_today();
+	}	
+	print_days(days);
+	add_now_as_time(days);
+	print_days(days);
+	write_days_to_file(FILENAME, days);
+}
+
+void add(int argc, char **argv)
+{
+	struct my_date *old_data = NULL;
+	read_csv_file(FILENAME, &old_data);
+	printf("readin done. now add times\n");
+	if (2 == argc) {
+HERE();
+		add_now_today_to_file(old_data);		
+	} else if( 3 == argc){
+			HERE();
+		// add given time(s)
+	}
+	
+}
+
 int main(int argc, char **argv)
 {	
 	switch (argc) {
@@ -239,13 +257,23 @@ int main(int argc, char **argv)
 			if (0 == strcasecmp(argv[1], "go")){
 				printf("go now:\n");	
 				go(argc, NULL);
+				break;
 			}
 			if (0 == strcasecmp(argv[1], "add")){
 				printf("add now\n");
+				add(argc, argv);
+				break;
 			}
-			if (0 == strcasecmp(argv[1], "help")){
-				print_help(argv[0]);
+			if ( 0 == strcasecmp(argv[1], "print")){
+				struct my_date *days = NULL;
+				printf("read and print csv file:\n");
+				read_csv_file(FILENAME, &days);
+				printf("========== READ DONE ================\n");
+				print_days(days);	
+				printf("-----------------------------------------\n");
+				break;
 			}
+			print_help(argv[0]);
 			break;
 		case 3:
 			if (0 == strcasecmp(argv[1], "go")){

@@ -48,14 +48,16 @@ int read_csv_file(char *filename, struct my_date **first_day);
 struct work_day sum_up_times(struct my_time *times, struct tm *nowtm);
 struct tm *get_now();
 int t2min(const struct my_time *mt);
-void print_list(struct my_time *first);
+void print_times(struct my_time *first);
 struct my_time *scan_time(char *argv);
 
 void add_now_as_time(struct my_date *days);
 void write_days_to_file(char *filename, struct my_date *date);
 void print_days(struct my_date *days);
 
+struct my_date *extract_date(int *len, const char *line);
 struct my_date *get_today();
-
+void  append_times(struct my_date *day, struct my_time *time);
+struct my_date *get_last_day(struct my_date *first);
 ;
 #endif

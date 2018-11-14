@@ -17,7 +17,18 @@ struct my_date *extract_date(int *olen, const char *in)
 	char date[16] = {0};
 	struct my_date *ret = calloc(sizeof(struct my_date), 1);
 
-	if (12 > strlen(in)){
+	char has_date = 0;
+	int count = 0;
+	while (*p != '-' && p < (in + 12)) {
+		if (*p == '.') {
+			has_date = 1;	
+			break;
+		}
+		p++;
+	}	
+	p = in;
+
+	if (12 > strlen(in) || !has_date){
 		return NULL;	
 	}	
 
@@ -59,17 +70,17 @@ void write_days_to_file(char *filename, struct my_date *day)
 		return;
 	}
 	fprintf(file, FILE_HEADER);
-	printf(FILE_HEADER);
+//	printf(FILE_HEADER);
 
 	while (it) {
 		struct my_time *tit = it->times;
 		struct work_day d = sum_up_times(it->times, get_now());
 		int work_minutes = t2min(&d.workt);
 		fprintf(file, "%02d.%02d.%04d;", it->day, it->mon, it->year);
-		printf( "# %02d.%02d.%04d;", it->day, it->mon, it->year);
+//		printf( "# %02d.%02d.%04d;", it->day, it->mon, it->year);
 		while(tit){
 			fprintf(file, "%02d:%02d;", tit->h, tit->m);
-			printf("%02d:%02d;", tit->h, tit->m);
+//			printf("%02d:%02d;", tit->h, tit->m);
 			tit = tit->next;
 
 		}
@@ -80,7 +91,7 @@ void write_days_to_file(char *filename, struct my_date *day)
 			worked_a_day = work_minutes - TARGET_WORK_MIN;
 		}
 		fprintf(file, ";%d;%d;;%d\n", work_minutes, t2min(&d.breakt), worked_a_day);
-		printf(";%d;%d;;%d\n", work_minutes, t2min(&d.breakt), worked_a_day);
+//		printf(";%d;%d;;%d\n", work_minutes, t2min(&d.breakt), worked_a_day);
 		it = it->next;
 
 	}
@@ -109,7 +120,7 @@ struct my_date *get_today()
 	struct tm *now = get_now();
 	struct my_date *today = malloc(sizeof(*today));
 	today->day = now->tm_mday;
-	today->mon = now->tm_mon;
+	today->mon = now->tm_mon + 1;
 	today->year = now->tm_year+1900;
 	today->next =	NULL;
 	today->times = NULL;
@@ -158,9 +169,9 @@ void add_now_as_time(struct my_date *days)
 	struct my_date *today = get_today();
 	struct my_date *day = NULL;
 	
-	printf("%d vs. %d\n", today->year, last->year);
-	printf("%d vs. %d\n", today->mon, last->mon);
-	printf("%d vs. %d\n", today->day, last->day);
+//	printf("%d vs. %d\n", today->year, last->year);
+//	printf("%d vs. %d\n", today->mon, last->mon);
+//	printf("%d vs. %d\n", today->day, last->day);
 	if (today->year != last->year || today->mon != last->mon || today->day != last->day) {
 		append_times(today, get_now_time());
 		append_day(days, today);
@@ -182,7 +193,7 @@ void print_days(struct my_date *d)
 	}
 	while (it) {
 		printf("[%d.%d.%d]:\n", it->day, it->mon, it->year);
-		print_list(it->times);
+		print_times(it->times);
 		it = it->next;
 	}
 	printf("--------\n");
@@ -205,10 +216,8 @@ int read_csv_file(char *filename, struct my_date **first_day)
 			continue;
 		}	
 		while (p < &line[sizeof(line) - 1]) {
-			printf("-%c.%c-", p[0], p[1]);
+//			printf("-%c.%c-", p[0], p[1]);
 			if (';' == p[0] && ';' == p[1]){
-				printf("LALALALALALALALAALAL\n");
-			//	goto  GOTO_CONTINUE;
 				p[0] = '\n';
 				char *del = &p[1];
 				while (*del) {
@@ -252,7 +261,7 @@ int read_csv_file(char *filename, struct my_date **first_day)
 		printf("time input: %s\n", line + len);
 		struct my_time *tt = scan_time(line + len);
 		date_it->times = tt;
-		print_list(tt);
+		print_times(tt);
 		memset(line, 0, sizeof(line));
 		printf("---------------\n");
 GOTO_CONTINUE:

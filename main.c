@@ -23,12 +23,21 @@ struct my_time *scan_time(char *argv)
 	strcpy(s, argv);
 	char* token = strtok(s, "-");
 	while (token) {
-		//	printf("token: %s\n", token);
-
-		numnum += sscanf(token, "%2d:%2d", &it->h, &it->m);
-		if (0 != numnum % 2){
-			printf("error with token: %s\n", token);
-			exit(-ERR_BADTOKEN);
+		printf("token: %s\n", token);
+		if (0 == strcasecmp("now", token)){
+			printf("add now as time\n");
+			struct tm *taim = get_now();
+			it->h = taim->tm_hour;
+			it->m = taim->tm_min;
+			it->s = taim->tm_sec;
+			it->next = NULL;
+			numnum += 2;
+		} else {
+			numnum += sscanf(token, "%2d:%2d", &it->h, &it->m);
+			if (0 != numnum % 2){
+				printf("error with token: %s\n", token);
+				exit(-ERR_BADTOKEN);
+			}
 		}
 		token = strtok(NULL, "-");
 		if (token){
@@ -58,7 +67,7 @@ struct my_time min2t(const int mins)
 }
 
 
-void print_list(struct my_time *first)
+void print_times(struct my_time *first)
 {
 	int n = 0;
 	struct my_time *it = first;
@@ -67,9 +76,21 @@ void print_list(struct my_time *first)
 		it =it->next; 
 		n++;
 	}
-
 }
 
+void delete_time_list(struct my_time **del)
+{
+	printf("going to delete: \n");
+	print_times(*del);
+	struct my_time *it1 = *del;
+	struct my_time *it2 = NULL;
+	while(NULL != it1){
+		it2 = it1->next;
+		free(it1);
+		it1 = NULL;
+	}
+	*del = NULL;
+}
 
 
 void just_go(const time_t *now)
@@ -232,19 +253,65 @@ void add_now_today_to_file(struct my_date *days)
 	write_days_to_file(FILENAME, days);
 }
 
+void add_date_with_time(struct my_date *days, struct my_date *nday)
+{
+	struct my_date *it = get_last_day(days);
+	printf("append to day: %d.%d.%d\n", it->day, it->mon, it->year);
+	//append_times(it, nday->times);
+	it->next = nday;
+}
+
+void set_date_with_time(struct my_date *days, struct my_date *nday)
+{
+	struct my_date *it = days;
+	printf("###### %p, %d=%d %d=%d %d=%d\n",it,  nday->year, it->year, 
+			nday->mon, it->mon, nday->day, it->day);
+
+	while (NULL != it 
+			&& (nday->year != it->year 
+			|| nday->mon != it->mon 
+			|| nday->day != it->day)) {
+		it = it->next;
+	}
+	if (NULL == it){
+		add_date_with_time(days, nday);
+		return;
+	}
+printf("beforedelete\n");
+	print_days(days);
+	delete_time_list(&it->times);
+printf("afterdelete\n");
+	print_days(days);
+	printf("iterator now: %d.%d.%d\n", it->day, it->mon, it->year);
+	struct my_date *next = it->next;
+	*it = *nday;
+	it = get_last_day(days);
+	printf("iterator2222 now: %d.%d.%d\n", it->day, it->mon, it->year);
+
+	it->next = next;
+}
+
 void add(int argc, char **argv)
 {
 	struct my_date *old_data = NULL;
 	read_csv_file(FILENAME, &old_data);
 	printf("readin done. now add times\n");
 	if (2 == argc) {
-HERE();
 		add_now_today_to_file(old_data);		
 	} else if( 3 == argc){
-			HERE();
-		// add given time(s)
+		int len = 0;
+		struct my_date *day= extract_date(&len, argv[2]);
+		struct my_time *mt = scan_time(argv[2] + len);
+		day->times = mt;
+		//add_date_with_time(old_data, day);
+		printf("<old_data>\n");
+		print_days(old_data);
+		printf("</old_data>\n");
+		set_date_with_time(old_data, day);
+		write_days_to_file(FILENAME, old_data);		
+		printf("results:");
+		print_days(old_data);
 	}
-	
 }
 
 int main(int argc, char **argv)
@@ -278,6 +345,9 @@ int main(int argc, char **argv)
 		case 3:
 			if (0 == strcasecmp(argv[1], "go")){
 				go(argc, argv);
+			}
+			if (0 == strcasecmp(argv[1], "add")){
+				add(argc, argv);
 			}
 			break;
 	}
